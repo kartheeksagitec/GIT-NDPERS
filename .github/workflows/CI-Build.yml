@@ -1,0 +1,93 @@
+name: CI - Build & Publish All Projects
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Build & Publish All Projects
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Build each project (Release)
+      shell: pwsh
+      run: |
+        $projects = @(
+          "slnNeoSpin/NeoSpinBatch/NeoSpinBatch.csproj",
+          "slnNeoSpin/NeoSpinBPMEngine/NeoSpinBPMEngine.csproj",
+          "slnNeoSpin/NeoSpinBusinessObjects/NeoSpinBusinessObjects.csproj",
+          "slnNeoSpin/NeoSpinBusinessTier/NeoSpinBusinessTier.csproj",
+          "slnNeoSpin/NeoSpinCommon/NeoSpinCommon.csproj",
+          "slnNeoSpin/NeoSpinESS/NeoSpinESS.csproj",
+          "slnNeoSpin/NeoSpinMSS/NeoSpinMSS.csproj",
+          "slnNeoSpin/NeoSpinInterface/NeoSpinInterface.csproj",
+          "slnNeoSpin/NeospinWebClientMVVM/NeospinWebClientMVVM.csproj"
+        )
+
+        foreach ($proj in $projects) {
+          Write-Host "Building project: $proj"
+          msbuild $proj /t:Rebuild /p:Configuration=Release /m `
+            /fl "/flp:logfile=$(Split-Path $proj -Leaf).log;verbosity=normal" `
+            /bl:"$(Split-Path $proj -Leaf).binlog"
+        }
+
+    - name: Prepare staging folder
+      shell: pwsh
+      run: |
+        $staging = "${{ runner.temp }}\Build_All_Staging"
+        if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
+        New-Item -ItemType Directory -Path $staging | Out-Null
+        Write-Host "Staging prepared at: $staging"
+
+    - name: Collect DLL outputs from all projects
+      shell: pwsh
+      run: |
+        $repoRoot = "${{ github.workspace }}"
+        $staging = "${{ runner.temp }}\Build_All_Staging"
+
+        $projects = @(
+          "slnNeoSpin/NeoSpinBatch",
+          "slnNeoSpin/NeoSpinBPMEngine",
+          "slnNeoSpin/NeoSpinBusinessObjects",
+          "slnNeoSpin/NeoSpinBusinessTier",
+          "slnNeoSpin/NeoSpinCommon",
+          "slnNeoSpin/NeoSpinESS",
+          "slnNeoSpin/NeoSpinMSS",
+          "slnNeoSpin/NeoSpinInterface",
+          "slnNeoSpin/NeospinWebClientMVVM"
+        )
+
+        foreach ($proj in $projects) {
+          $projPath = Join-Path $repoRoot $proj
+          if (-not (Test-Path $projPath)) { continue }
+
+          $binFolders = Get-ChildItem -Path $projPath -Recurse -Directory -Force |
+                        Where-Object { $_.Name -eq "bin" }
+
+          foreach ($bf in $binFolders) {
+            $target = Join-Path $staging (Split-Path $proj -Leaf)
+            New-Item -ItemType Directory -Force -Path $target | Out-Null
+            Write-Host "Copying DLLs from $($bf.FullName) → $target"
+            Copy-Item -Path (Join-Path $bf.FullName '*') -Destination $target -Recurse -Force -ErrorAction SilentlyContinue
+          }
+        }
+
+        Write-Host "All DLLs collected at: $staging"
+        Get-ChildItem -Path $staging -Recurse | Select-Object FullName
+
+    - name: Upload combined artifact (All DLLs + logs)
+      uses: actions/upload-artifact@v4
+      with:
+        name: Build-All-Projects
+        path: ${{ runner.temp }}/Build_All_Staging
+        if-no-files-found: error
+
