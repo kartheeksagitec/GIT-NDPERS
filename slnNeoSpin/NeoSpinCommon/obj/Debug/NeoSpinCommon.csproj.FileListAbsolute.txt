@@ -1,0 +1,7 @@
+D:\Systest\Bin\NeoSpinCommon.dll
+D:\Systest\Bin\NeoSpinCommon.pdb
+D:\Systest\slnNeoSpin\NeoSpinCommon\obj\Debug\NeoSpinCommon.csproj.AssemblyReference.cache
+D:\Systest\slnNeoSpin\NeoSpinCommon\obj\Debug\NeoSpinCommon.csproj.CoreCompileInputs.cache
+D:\Systest\slnNeoSpin\NeoSpinCommon\obj\Debug\NeoSpinC.37F63B9B.Up2Date
+D:\Systest\slnNeoSpin\NeoSpinCommon\obj\Debug\NeoSpinCommon.dll
+D:\Systest\slnNeoSpin\NeoSpinCommon\obj\Debug\NeoSpinCommon.pdb

@@ -1,0 +1,13 @@
+D:\Systest\Bin\NeoSpinBatch.exe.config
+D:\Systest\Bin\NeoSpinBatch.exe
+D:\Systest\Bin\NeoSpinBatch.pdb
+D:\Systest\slnNeoSpin\NeoSpinBatch\obj\Debug\NeoSpinBatch.csproj.AssemblyReference.cache
+D:\Systest\slnNeoSpin\NeoSpinBatch\obj\Debug\NeoSpinBatch.csproj.SuggestedBindingRedirects.cache
+D:\Systest\slnNeoSpin\NeoSpinBatch\obj\Debug\NeoSpinBatch.exe.config
+D:\Systest\slnNeoSpin\NeoSpinBatch\obj\Debug\NeoSpinBatch.frmNeoSpinBatch.resources
+D:\Systest\slnNeoSpin\NeoSpinBatch\obj\Debug\NeoSpinBatch.Properties.Resources.resources
+D:\Systest\slnNeoSpin\NeoSpinBatch\obj\Debug\NeoSpinBatch.csproj.GenerateResource.cache
+D:\Systest\slnNeoSpin\NeoSpinBatch\obj\Debug\NeoSpinBatch.csproj.CoreCompileInputs.cache
+D:\Systest\slnNeoSpin\NeoSpinBatch\obj\Debug\NeoSpinB.AE80685E.Up2Date
+D:\Systest\slnNeoSpin\NeoSpinBatch\obj\Debug\NeoSpinBatch.exe
+D:\Systest\slnNeoSpin\NeoSpinBatch\obj\Debug\NeoSpinBatch.pdb

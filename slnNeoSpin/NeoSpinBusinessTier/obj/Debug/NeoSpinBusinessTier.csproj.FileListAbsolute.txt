@@ -1,0 +1,12 @@
+D:\Systest\Bin\NeoSpinBusinessTier.exe.config
+D:\Systest\Bin\NeoSpinBusinessTier.exe
+D:\Systest\Bin\NeoSpinBusinessTier.pdb
+D:\Systest\slnNeoSpin\NeoSpinBusinessTier\obj\Debug\NeoSpinBusinessTier.csproj.AssemblyReference.cache
+D:\Systest\slnNeoSpin\NeoSpinBusinessTier\obj\Debug\NeoSpinBusinessTier.csproj.SuggestedBindingRedirects.cache
+D:\Systest\slnNeoSpin\NeoSpinBusinessTier\obj\Debug\NeoSpinBusinessTier.exe.config
+D:\Systest\slnNeoSpin\NeoSpinBusinessTier\obj\Debug\NeoSpin.BusinessTier.frmNeoSpinBusinessTier.resources
+D:\Systest\slnNeoSpin\NeoSpinBusinessTier\obj\Debug\NeoSpinBusinessTier.csproj.GenerateResource.cache
+D:\Systest\slnNeoSpin\NeoSpinBusinessTier\obj\Debug\NeoSpinBusinessTier.csproj.CoreCompileInputs.cache
+D:\Systest\slnNeoSpin\NeoSpinBusinessTier\obj\Debug\NeoSpinB.29A83967.Up2Date
+D:\Systest\slnNeoSpin\NeoSpinBusinessTier\obj\Debug\NeoSpinBusinessTier.exe
+D:\Systest\slnNeoSpin\NeoSpinBusinessTier\obj\Debug\NeoSpinBusinessTier.pdb

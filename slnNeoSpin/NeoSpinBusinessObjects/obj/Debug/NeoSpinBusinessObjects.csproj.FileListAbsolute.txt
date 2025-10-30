@@ -1,0 +1,9 @@
+D:\Systest\bin\NeoSpinBusinessObjects.dll
+D:\Systest\bin\NeoSpinBusinessObjects.pdb
+D:\Systest\slnNeoSpin\NeoSpinBusinessObjects\obj\Debug\NeoSpinBusinessObjects.csproj.AssemblyReference.cache
+D:\Systest\slnNeoSpin\NeoSpinBusinessObjects\obj\Debug\NeoSpin.BusinessObjects.Properties.Resources.resources
+D:\Systest\slnNeoSpin\NeoSpinBusinessObjects\obj\Debug\NeoSpinBusinessObjects.csproj.GenerateResource.cache
+D:\Systest\slnNeoSpin\NeoSpinBusinessObjects\obj\Debug\NeoSpinBusinessObjects.csproj.CoreCompileInputs.cache
+D:\Systest\slnNeoSpin\NeoSpinBusinessObjects\obj\Debug\NeoSpinB.FC49B219.Up2Date
+D:\Systest\slnNeoSpin\NeoSpinBusinessObjects\obj\Debug\NeoSpinBusinessObjects.dll
+D:\Systest\slnNeoSpin\NeoSpinBusinessObjects\obj\Debug\NeoSpinBusinessObjects.pdb
