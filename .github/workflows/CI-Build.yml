@@ -1,4 +1,4 @@
-name: CI-Build-And-Artifacts
+name: CI - Build & Publish All Projects
 
 on:
   push:
@@ -7,94 +7,89 @@ on:
     branches: [ "main" ]
 
 jobs:
-  # ---------- BUILD JOB ----------
   build:
-    name:  Build All Projects
+    name: Build & Publish All Projects
     runs-on: windows-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
 
-      - name: Restore NuGet packages
-        run: nuget restore slnNeoSpin/slnNeoSpin.sln
+    - name: Build solution (Rebuild, Release) and produce logs
+      shell: pwsh
+      run: |
+        $sln = "slnNeoSpin/slnNeoSpin.sln"
+        msbuild $sln /t:Rebuild /p:Configuration=Release /m `
+          /fl `
+          "/flp:logfile=msbuild.log;verbosity=diagnostic" `
+          /bl:msbuild.binlog > build_output.txt 2>&1
 
-      - name: Build solution (Release mode)
-        run: msbuild slnNeoSpin/slnNeoSpin.sln /p:Configuration=Release /m
+    - name: Prepare staging folder
+      shell: pwsh
+      run: |
+        $staging = "${{ runner.temp }}\Build_All_Staging"
+        if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
+        New-Item -ItemType Directory -Path $staging | Out-Null
+        Write-Host "Staging prepared at: $staging"
 
-      # Publish artifacts per project for clarity
-      - name: Upload NeoSpinBusinessObjects DLLs
-        uses: actions/upload-artifact@v4
-        with:
-          name: NeoSpinBusinessObjects
-          path: slnNeoSpin/NeoSpinBusinessObjects/bin/Release/**/*.dll
+    - name: Collect project outputs into staging (all platforms/configs)
+      shell: pwsh
+      run: |
+        $repoRoot = "${{ github.workspace }}"
 
-      - name: Upload NeoSpinBatch DLLs
-        uses: actions/upload-artifact@v4
-        with:
-          name: NeoSpinBatch
-          path: slnNeoSpin/NeoSpinBatch/bin/Release/**/*.dll
+        # List of project relative folders (as you provided)
+        $projects = @(
+          "slnNeoSpin/NeoSpinBatch",
+          "slnNeoSpin/NeoSpinBPMEngine",
+          "slnNeoSpin/NeoSpinBusinessObjects",
+          "slnNeoSpin/NeoSpinBusinessTier",
+          "slnNeoSpin/NeoSpinCommon",
+          "slnNeoSpin/NeoSpinESS",
+          "slnNeoSpin/NeoSpinMSS",
+          "slnNeoSpin/NeoSpinInterface",
+          "slnNeoSpin/NeospinWebClientMVVM"
+        )
 
-      - name: Upload NeoSpinBPMEngine DLLs
-        uses: actions/upload-artifact@v4
-        with:
-          name: NeoSpinBPMEngine
-          path: slnNeoSpin/NeoSpinBPMEngine/bin/Release/**/*.dll
+        $staging = "${{ runner.temp }}\Build_All_Staging"
 
-      - name: Upload NeoSpinDataAccess DLLs
-        uses: actions/upload-artifact@v4
-        with:
-          name: NeoSpinDataAccess
-          path: slnNeoSpin/NeoSpinDataAccess/bin/Release/**/*.dll
+        foreach ($proj in $projects) {
+          $projPath = Join-Path $repoRoot $proj
+          if (-not (Test-Path $projPath)) {
+            Write-Host " Project folder not found: $projPath (skipping)"
+            continue
+          }
 
-      - name: Upload NeoSpinDBEngine DLLs
-        uses: actions/upload-artifact@v4
-        with:
-          name: NeoSpinDBEngine
-          path: slnNeoSpin/NeoSpinDBEngine/bin/Release/**/*.dll
+          # Find any 'bin' folders under the project (any configuration/platform)
+          $binFolders = Get-ChildItem -Path $projPath -Recurse -Directory -Force |
+                        Where-Object { $_.FullName -match "\\bin($|\\)" }
 
-      - name: Upload NeoSpinScheduler DLLs
-        uses: actions/upload-artifact@v4
-        with:
-          name: NeoSpinScheduler
-          path: slnNeoSpin/NeoSpinScheduler/bin/Release/**/*.dll
+          if ($binFolders.Count -eq 0) {
+            Write-Host " No bin folders found under $projPath (skipping)"
+            continue
+          }
 
-      - name: Upload NeoSpinUI DLLs
-        uses: actions/upload-artifact@v4
-        with:
-          name: NeoSpinUI
-          path: slnNeoSpin/NeoSpinUI/bin/Release/**/*.dll
+          # copy every file from each bin folder into staging/<ProjectName> preserving structure
+          $target = Join-Path $staging (Split-Path $proj -Leaf)
+          New-Item -ItemType Directory -Force -Path $target | Out-Null
 
-      - name: Upload NeoSpinUtility DLLs
-        uses: actions/upload-artifact@v4
-        with:
-          name: NeoSpinUtility
-          path: slnNeoSpin/NeoSpinUtility/bin/Release/**/*.dll
+          foreach ($bf in $binFolders) {
+            Write-Host "Copying from: $($bf.FullName) -> $target"
+            Copy-Item -Path (Join-Path $bf.FullName '*') -Destination $target -Recurse -Force -ErrorAction SilentlyContinue
+          }
+        }
 
-      - name: Upload BPMDeploymentUtility DLLs
-        uses: actions/upload-artifact@v4
-        with:
-          name: BPMDeploymentUtility
-          path: slnNeoSpin/BPMDeploymentUtility/bin/Release/**/*.dll
+        # Also copy logs into the staging folder
+        Copy-Item msbuild.log, msbuild.binlog, build_output.txt -Destination $staging -Force -ErrorAction SilentlyContinue
 
+        Write-Host "Contents of staging folder:"
+        Get-ChildItem -Path $staging -Recurse | Select-Object FullName, Length | ForEach-Object { Write-Host $_.FullName }
 
-  # ---------- DOWNLOAD JOB ----------
-  download:
-    name:  Collect All Artifacts
-    needs: build
-    runs-on: windows-latest
-
-    steps:
-      - name: Download All Project DLLs
-        uses: actions/download-artifact@v4
-        with:
-          path: All_Build_DLLs
-
-      - name: Verify downloaded structure
-        run: |
-          Write-Host "=== Downloaded Artifacts ==="
-          Get-ChildItem -Path All_Build_DLLs -Recurse | Select-Object FullName
-        shell: pwsh
+    - name: Upload single artifact (all projects + logs)
+      uses: actions/upload-artifact@v4
+      with:
+        name: Build-All-Projects
+        path: ${{ runner.temp }}/Build_All_Staging
+        if-no-files-found: error
