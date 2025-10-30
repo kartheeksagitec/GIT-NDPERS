@@ -18,14 +18,27 @@ jobs:
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
 
-    - name: Build solution (Rebuild, Release) and produce logs
+    - name: Build each project (Release)
       shell: pwsh
       run: |
-        $sln = "slnNeoSpin/slnNeoSpin.sln"
-        msbuild $sln /t:Rebuild /p:Configuration=Release /m `
-          /fl `
-          "/flp:logfile=msbuild.log;verbosity=diagnostic" `
-          /bl:msbuild.binlog > build_output.txt 2>&1
+        $projects = @(
+          "slnNeoSpin/NeoSpinBatch/NeoSpinBatch.csproj",
+          "slnNeoSpin/NeoSpinBPMEngine/NeoSpinBPMEngine.csproj",
+          "slnNeoSpin/NeoSpinBusinessObjects/NeoSpinBusinessObjects.csproj",
+          "slnNeoSpin/NeoSpinBusinessTier/NeoSpinBusinessTier.csproj",
+          "slnNeoSpin/NeoSpinCommon/NeoSpinCommon.csproj",
+          "slnNeoSpin/NeoSpinESS/NeoSpinESS.csproj",
+          "slnNeoSpin/NeoSpinMSS/NeoSpinMSS.csproj",
+          "slnNeoSpin/NeoSpinInterface/NeoSpinInterface.csproj",
+          "slnNeoSpin/NeospinWebClientMVVM/NeospinWebClientMVVM.csproj"
+        )
+
+        foreach ($proj in $projects) {
+          Write-Host "Building project: $proj"
+          msbuild $proj /t:Rebuild /p:Configuration=Release /m `
+            /fl "/flp:logfile=$(Split-Path $proj -Leaf).log;verbosity=normal" `
+            /bl:"$(Split-Path $proj -Leaf).binlog"
+        }
 
     - name: Prepare staging folder
       shell: pwsh
@@ -35,12 +48,12 @@ jobs:
         New-Item -ItemType Directory -Path $staging | Out-Null
         Write-Host "Staging prepared at: $staging"
 
-    - name: Collect project outputs into staging (all platforms/configs)
+    - name: Collect DLL outputs from all projects
       shell: pwsh
       run: |
         $repoRoot = "${{ github.workspace }}"
+        $staging = "${{ runner.temp }}\Build_All_Staging"
 
-        # List of project relative folders (as you provided)
         $projects = @(
           "slnNeoSpin/NeoSpinBatch",
           "slnNeoSpin/NeoSpinBPMEngine",
@@ -53,43 +66,28 @@ jobs:
           "slnNeoSpin/NeospinWebClientMVVM"
         )
 
-        $staging = "${{ runner.temp }}\Build_All_Staging"
-
         foreach ($proj in $projects) {
           $projPath = Join-Path $repoRoot $proj
-          if (-not (Test-Path $projPath)) {
-            Write-Host " Project folder not found: $projPath (skipping)"
-            continue
-          }
+          if (-not (Test-Path $projPath)) { continue }
 
-          # Find any 'bin' folders under the project (any configuration/platform)
           $binFolders = Get-ChildItem -Path $projPath -Recurse -Directory -Force |
-                        Where-Object { $_.FullName -match "\\bin($|\\)" }
-
-          if ($binFolders.Count -eq 0) {
-            Write-Host " No bin folders found under $projPath (skipping)"
-            continue
-          }
-
-          # copy every file from each bin folder into staging/<ProjectName> preserving structure
-          $target = Join-Path $staging (Split-Path $proj -Leaf)
-          New-Item -ItemType Directory -Force -Path $target | Out-Null
+                        Where-Object { $_.Name -eq "bin" }
 
           foreach ($bf in $binFolders) {
-            Write-Host "Copying from: $($bf.FullName) -> $target"
+            $target = Join-Path $staging (Split-Path $proj -Leaf)
+            New-Item -ItemType Directory -Force -Path $target | Out-Null
+            Write-Host "Copying DLLs from $($bf.FullName) → $target"
             Copy-Item -Path (Join-Path $bf.FullName '*') -Destination $target -Recurse -Force -ErrorAction SilentlyContinue
           }
         }
 
-        # Also copy logs into the staging folder
-        Copy-Item msbuild.log, msbuild.binlog, build_output.txt -Destination $staging -Force -ErrorAction SilentlyContinue
+        Write-Host "All DLLs collected at: $staging"
+        Get-ChildItem -Path $staging -Recurse | Select-Object FullName
 
-        Write-Host "Contents of staging folder:"
-        Get-ChildItem -Path $staging -Recurse | Select-Object FullName, Length | ForEach-Object { Write-Host $_.FullName }
-
-    - name: Upload single artifact (all projects + logs)
+    - name: Upload combined artifact (All DLLs + logs)
       uses: actions/upload-artifact@v4
       with:
         name: Build-All-Projects
         path: ${{ runner.temp }}/Build_All_Staging
         if-no-files-found: error
+
