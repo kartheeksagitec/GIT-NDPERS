@@ -16,37 +16,37 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    # 2️⃣ Setup MSBuild (for .NET Framework projects)
+    # 2️⃣ Setup MSBuild
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
 
-    # 3️⃣ Build solution
+    # 3️⃣ Build the solution
     - name: Build Solution
       run: msbuild slnNeoSpin/slnNeoSpin.sln /p:Configuration=Release
       shell: pwsh
 
-    # 4️⃣ Create staging directory for artifacts
+    # 4️⃣ Prepare artifact folder
     - name: Prepare Artifact Folder
       shell: pwsh
       run: |
-        $output = "$(Build.ArtifactStagingDirectory)"
+        $output = "${{ runner.temp }}\artifacts"
         if (-not (Test-Path $output)) { New-Item -ItemType Directory -Force -Path $output }
         Write-Host "Artifact directory prepared at: $output"
 
-    # 5️⃣ Collect DLLs from all projects
-    - name: Copy DLLs to Artifact Staging
+    # 5️⃣ Collect all DLLs from Release folders
+    - name: Copy DLLs to Artifact Folder
       shell: pwsh
       run: |
-        $staging = "artifacts"
-        mkdir $staging -Force | Out-Null
+        $staging = "${{ runner.temp }}\artifacts"
         Get-ChildItem -Path . -Recurse -Include *.dll | 
           Where-Object { $_.FullName -match 'bin\\Release' } |
           Copy-Item -Destination $staging -Force
+        Write-Host "Copied all Release DLLs to $staging"
 
-    # 6️⃣ Upload compiled binaries as artifacts
-    - name: Publish Build Artifacts
+    # 6️⃣ Upload all as artifacts
+    - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: Build-DLLs
-        path: artifacts/
+        path: ${{ runner.temp }}/artifacts
         if-no-files-found: error
