@@ -50,3 +50,4 @@ D:\Systest\slnNeoSpin\NeoSpinBPMEngine\obj\x86\Debug\NeoSpinBPMEngine.csproj.Cor
 D:\Systest\slnNeoSpin\NeoSpinBPMEngine\obj\x86\Debug\NeoSpinB.DF59E0D4.Up2Date
 D:\Systest\slnNeoSpin\NeoSpinBPMEngine\obj\x86\Debug\NeoSpinBPMEngine.exe
 D:\Systest\slnNeoSpin\NeoSpinBPMEngine\obj\x86\Debug\NeoSpinBPMEngine.pdb
+D:\Systest\slnNeoSpin\NeoSpinBPMEngine\obj\x86\Debug\NeoSpinBPMEngine.exe.config
