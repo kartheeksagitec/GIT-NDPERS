@@ -1,0 +1,52 @@
+name: CI-Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Build and Publish Artifacts
+    runs-on: windows-latest
+
+    steps:
+    # 1️⃣ Checkout repository
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    # 2️⃣ Setup MSBuild (for .NET Framework projects)
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    # 3️⃣ Build solution
+    - name: Build Solution
+      run: msbuild slnNeoSpin/slnNeoSpin.sln /p:Configuration=Release
+      shell: pwsh
+
+    # 4️⃣ Create staging directory for artifacts
+    - name: Prepare Artifact Folder
+      shell: pwsh
+      run: |
+        $output = "$(Build.ArtifactStagingDirectory)"
+        if (-not (Test-Path $output)) { New-Item -ItemType Directory -Force -Path $output }
+        Write-Host "Artifact directory prepared at: $output"
+
+    # 5️⃣ Collect DLLs from all projects
+    - name: Copy DLLs to Artifact Staging
+      shell: pwsh
+      run: |
+        $staging = "artifacts"
+        mkdir $staging -Force | Out-Null
+        Get-ChildItem -Path . -Recurse -Include *.dll | 
+          Where-Object { $_.FullName -match 'bin\\Release' } |
+          Copy-Item -Destination $staging -Force
+
+    # 6️⃣ Upload compiled binaries as artifacts
+    - name: Publish Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: Build-DLLs
+        path: artifacts/
+        if-no-files-found: error
