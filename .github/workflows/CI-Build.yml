@@ -12,20 +12,16 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    # 1️⃣ Checkout repository
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    # 2️⃣ Setup MSBuild
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
 
-    # 3️⃣ Build the solution
     - name: Build Solution
       run: msbuild slnNeoSpin/slnNeoSpin.sln /p:Configuration=Release
       shell: pwsh
 
-    # 4️⃣ Prepare artifact folder
     - name: Prepare Artifact Folder
       shell: pwsh
       run: |
@@ -33,20 +29,22 @@ jobs:
         if (-not (Test-Path $output)) { New-Item -ItemType Directory -Force -Path $output }
         Write-Host "Artifact directory prepared at: $output"
 
-    # 5️⃣ Collect all DLLs from Release folders
-    - name: Copy DLLs to Artifact Folder
+    - name: Copy All DLLs from All Projects
       shell: pwsh
       run: |
         $staging = "${{ runner.temp }}\artifacts"
-        Get-ChildItem -Path . -Recurse -Include *.dll | 
-          Where-Object { $_.FullName -match 'bin\\Release' } |
-          Copy-Item -Destination $staging -Force
-        Write-Host "Copied all Release DLLs to $staging"
+        $releaseFolders = Get-ChildItem -Path . -Directory -Recurse | Where-Object { $_.FullName -like '*\bin\Release' }
+        foreach ($folder in $releaseFolders) {
+            $projectName = Split-Path (Split-Path $folder.FullName -Parent) -Leaf
+            $target = Join-Path $staging $projectName
+            New-Item -ItemType Directory -Force -Path $target | Out-Null
+            Copy-Item "$($folder.FullName)\*" $target -Recurse -Force
+            Write-Host " Copied DLLs from project: $projectName"
+        }
 
-    # 6️⃣ Upload all as artifacts
-    - name: Upload Build Artifacts
+    - name: Upload All Project DLLs
       uses: actions/upload-artifact@v4
       with:
-        name: Build-DLLs
+        name: All-Project-DLLs
         path: ${{ runner.temp }}/artifacts
         if-no-files-found: error
