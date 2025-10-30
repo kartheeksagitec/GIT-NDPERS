@@ -1,4 +1,4 @@
-name: CI-Build
+name: CI-Build-And-Artifacts
 
 on:
   push:
@@ -7,44 +7,94 @@ on:
     branches: [ "main" ]
 
 jobs:
+  # ---------- BUILD JOB ----------
   build:
-    name: Build and Publish Artifacts
+    name:  Build All Projects
     runs-on: windows-latest
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
 
-    - name: Build Solution
-      run: msbuild slnNeoSpin/slnNeoSpin.sln /p:Configuration=Release
-      shell: pwsh
+      - name: Restore NuGet packages
+        run: nuget restore slnNeoSpin/slnNeoSpin.sln
 
-    - name: Prepare Artifact Folder
-      shell: pwsh
-      run: |
-        $output = "${{ runner.temp }}\artifacts"
-        if (-not (Test-Path $output)) { New-Item -ItemType Directory -Force -Path $output }
-        Write-Host "Artifact directory prepared at: $output"
+      - name: Build solution (Release mode)
+        run: msbuild slnNeoSpin/slnNeoSpin.sln /p:Configuration=Release /m
 
-    - name: Copy All DLLs from All Projects
-      shell: pwsh
-      run: |
-        $staging = "${{ runner.temp }}\artifacts"
-        $releaseFolders = Get-ChildItem -Path . -Directory -Recurse | Where-Object { $_.FullName -like '*\bin\Release' }
-        foreach ($folder in $releaseFolders) {
-            $projectName = Split-Path (Split-Path $folder.FullName -Parent) -Leaf
-            $target = Join-Path $staging $projectName
-            New-Item -ItemType Directory -Force -Path $target | Out-Null
-            Copy-Item "$($folder.FullName)\*" $target -Recurse -Force
-            Write-Host " Copied DLLs from project: $projectName"
-        }
+      # Publish artifacts per project for clarity
+      - name: Upload NeoSpinBusinessObjects DLLs
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeoSpinBusinessObjects
+          path: slnNeoSpin/NeoSpinBusinessObjects/bin/Release/**/*.dll
 
-    - name: Upload All Project DLLs
-      uses: actions/upload-artifact@v4
-      with:
-        name: All-Project-DLLs
-        path: ${{ runner.temp }}/artifacts
-        if-no-files-found: error
+      - name: Upload NeoSpinBatch DLLs
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeoSpinBatch
+          path: slnNeoSpin/NeoSpinBatch/bin/Release/**/*.dll
+
+      - name: Upload NeoSpinBPMEngine DLLs
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeoSpinBPMEngine
+          path: slnNeoSpin/NeoSpinBPMEngine/bin/Release/**/*.dll
+
+      - name: Upload NeoSpinDataAccess DLLs
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeoSpinDataAccess
+          path: slnNeoSpin/NeoSpinDataAccess/bin/Release/**/*.dll
+
+      - name: Upload NeoSpinDBEngine DLLs
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeoSpinDBEngine
+          path: slnNeoSpin/NeoSpinDBEngine/bin/Release/**/*.dll
+
+      - name: Upload NeoSpinScheduler DLLs
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeoSpinScheduler
+          path: slnNeoSpin/NeoSpinScheduler/bin/Release/**/*.dll
+
+      - name: Upload NeoSpinUI DLLs
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeoSpinUI
+          path: slnNeoSpin/NeoSpinUI/bin/Release/**/*.dll
+
+      - name: Upload NeoSpinUtility DLLs
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeoSpinUtility
+          path: slnNeoSpin/NeoSpinUtility/bin/Release/**/*.dll
+
+      - name: Upload BPMDeploymentUtility DLLs
+        uses: actions/upload-artifact@v4
+        with:
+          name: BPMDeploymentUtility
+          path: slnNeoSpin/BPMDeploymentUtility/bin/Release/**/*.dll
+
+
+  # ---------- DOWNLOAD JOB ----------
+  download:
+    name:  Collect All Artifacts
+    needs: build
+    runs-on: windows-latest
+
+    steps:
+      - name: Download All Project DLLs
+        uses: actions/download-artifact@v4
+        with:
+          path: All_Build_DLLs
+
+      - name: Verify downloaded structure
+        run: |
+          Write-Host "=== Downloaded Artifacts ==="
+          Get-ChildItem -Path All_Build_DLLs -Recurse | Select-Object FullName
+        shell: pwsh
