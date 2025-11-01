@@ -16,13 +16,14 @@ jobs:
     steps:
       # 1. Confirm Trigger
       - name: Validate CI Completion
+        shell: powershell
         run: |
           Write-Host "CI build completed successfully."
           Write-Host "Starting CD deployment to IIS..."
 
       # 2. Stop IIS Service
       - name: Stop IIS Service
-        shell: pwsh
+        shell: powershell
         run: |
           try {
               Stop-Service -Name 'W3SVC' -Force -ErrorAction Stop
@@ -33,12 +34,14 @@ jobs:
 
       # 3. Clean Old Deployment
       - name: Clean Existing Deployment
-        shell: pwsh
+        shell: powershell
         run: |
           $deployPath = "C:\inetpub\wwwroot\NeoSpin"
           if (Test-Path $deployPath) {
+              Write-Host "Cleaning existing files from $deployPath"
               Remove-Item "$deployPath\*" -Recurse -Force -ErrorAction SilentlyContinue
           } else {
+              Write-Host "Creating new deployment directory..."
               New-Item -ItemType Directory -Path $deployPath | Out-Null
           }
 
@@ -53,23 +56,24 @@ jobs:
 
       # 5. Deploy to IIS Folder
       - name: Deploy Application Files
-        shell: pwsh
+        shell: powershell
         run: |
           $source = "C:\Deployments\NeoSpin"
           $destination = "C:\inetpub\wwwroot\NeoSpin"
+          Write-Host "Copying new build artifacts to IIS folder..."
           Copy-Item "$source\*" "$destination" -Recurse -Force -ErrorAction SilentlyContinue
           Write-Host "Deployment completed successfully."
 
       # 6. Start IIS Service
       - name: Start IIS Service
-        shell: pwsh
+        shell: powershell
         run: |
           Start-Service -Name 'W3SVC'
           Write-Host "IIS started successfully."
 
       # 7. Deployment Summary
       - name: Deployment Summary
-        shell: pwsh
+        shell: powershell
         run: |
           Write-Host "---------------------------------------------"
           Write-Host "Deployment Summary"
