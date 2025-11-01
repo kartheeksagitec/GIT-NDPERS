@@ -8,59 +8,72 @@ on:
 
 jobs:
   deploy:
-    name: Deploy to Local Environment
+    name: Deploy to Local IIS Environment
     runs-on: self-hosted  
 
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - name: Confirm Trigger
-        run: echo " CI pipeline succeeded. Starting CD deployment..."
+      # 1. Confirm Trigger
+      - name: Validate CI Completion
+        run: |
+          Write-Host "CI build completed successfully."
+          Write-Host "Starting CD deployment to IIS..."
 
-      - name: Stop IIS Services
+      # 2. Stop IIS Service
+      - name: Stop IIS Service
         shell: pwsh
         run: |
-          Write-Host "Stopping IIS..."
-          Stop-Service -Name 'W3SVC' -Force
-          Write-Host "IIS stopped successfully."
+          try {
+              Stop-Service -Name 'W3SVC' -Force -ErrorAction Stop
+              Write-Host "IIS stopped successfully."
+          } catch {
+              Write-Host "IIS is not running or already stopped."
+          }
 
-      - name: Clean old deployment files
+      # 3. Clean Old Deployment
+      - name: Clean Existing Deployment
         shell: pwsh
         run: |
           $deployPath = "C:\inetpub\wwwroot\NeoSpin"
           if (Test-Path $deployPath) {
-              Write-Host "Removing existing files in $deployPath"
               Remove-Item "$deployPath\*" -Recurse -Force -ErrorAction SilentlyContinue
           } else {
-              Write-Host "Creating new deployment folder..."
               New-Item -ItemType Directory -Path $deployPath | Out-Null
           }
 
-      - name: Download Build Artifacts from CI
-        uses: actions/download-artifact@v4
+      # 4. Download Artifact from CI Workflow
+      - name: Download CI Artifact
+        uses: dawidd6/action-download-artifact@v2
         with:
+          workflow: "CI - Build & Publish All Projects"
+          workflow_conclusion: success
           name: Build-All-Projects
           path: C:\Deployments\NeoSpin
 
-      - name: Deploy new build files
+      # 5. Deploy to IIS Folder
+      - name: Deploy Application Files
         shell: pwsh
         run: |
-          Write-Host "Copying new build artifacts to IIS folder..."
-          Copy-Item "C:\Deployments\NeoSpin\*" "C:\inetpub\wwwroot\NeoSpin" -Recurse -Force
+          $source = "C:\Deployments\NeoSpin"
+          $destination = "C:\inetpub\wwwroot\NeoSpin"
+          Copy-Item "$source\*" "$destination" -Recurse -Force -ErrorAction SilentlyContinue
           Write-Host "Deployment completed successfully."
 
-      - name: Start IIS Services
+      # 6. Start IIS Service
+      - name: Start IIS Service
         shell: pwsh
         run: |
-          Write-Host "Starting IIS..."
           Start-Service -Name 'W3SVC'
           Write-Host "IIS started successfully."
 
+      # 7. Deployment Summary
       - name: Deployment Summary
         shell: pwsh
         run: |
-          Write-Host "---------------------------------------------------"
-          Write-Host " Deployment Summary:"
-          Write-Host " Artifacts deployed to: C:\inetpub\wwwroot\NeoSpin"
-          Write-Host " Completed on: $(Get-Date)"
-          Write-Host "---------------------------------------------------"
+          Write-Host "---------------------------------------------"
+          Write-Host "Deployment Summary"
+          Write-Host "Artifacts Source : CI - Build & Publish All Projects"
+          Write-Host "Deployed To      : C:\inetpub\wwwroot\NeoSpin"
+          Write-Host "Execution Time   : $(Get-Date)"
+          Write-Host "---------------------------------------------"
