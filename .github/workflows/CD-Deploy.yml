@@ -19,12 +19,12 @@ jobs:
 
     steps:
       - name: Confirm CI Success
-        shell: pwsh
+        shell: powershell
         run: |
           Write-Host "✅ CI workflow completed successfully. Starting deployment..."
 
       - name: Stop IIS Service
-        shell: pwsh
+        shell: powershell
         run: |
           try {
               Stop-Service -Name 'W3SVC' -Force -ErrorAction Stop
@@ -34,7 +34,7 @@ jobs:
           }
 
       - name: Clean Deployment Folder
-        shell: pwsh
+        shell: powershell
         run: |
           $deployPath = "C:\inetpub\wwwroot\NeoSpin"
           if (Test-Path $deployPath) {
@@ -56,19 +56,19 @@ jobs:
           path: C:\Deployments\NeoSpin
 
       - name: Deploy to IIS
-        shell: pwsh
+        shell: powershell
         run: |
           Copy-Item "C:\Deployments\NeoSpin\*" "C:\inetpub\wwwroot\NeoSpin" -Recurse -Force
           Write-Host "🚀 Application deployed successfully to IIS."
 
       - name: Start IIS Service
-        shell: pwsh
+        shell: powershell
         run: |
           Start-Service -Name 'W3SVC'
           Write-Host "✅ IIS started successfully."
 
       - name: Deployment Summary
-        shell: pwsh
+        shell: powershell
         run: |
           Write-Host "---------------------------------------------"
           Write-Host "✅ Deployment Summary"
