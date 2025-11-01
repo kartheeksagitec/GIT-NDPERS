@@ -49,11 +49,12 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          workflow: "CI - Build & Publish All Projects"
+          workflow: "CI-Build.yml"   # exact CI file name
           workflow_conclusion: success
           branch: main
           name: Build-All-Projects
           path: C:\Deployments\NeoSpin
+          check_artifacts: true
 
       - name: Deploy to IIS
         shell: powershell

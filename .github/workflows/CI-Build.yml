@@ -34,7 +34,7 @@ jobs:
         )
 
         foreach ($proj in $projects) {
-          Write-Host "🔧 Building project: $proj"
+          Write-Host "Building project: $proj"
           msbuild $proj /t:Rebuild /p:Configuration=Release /m
         }
 
@@ -51,7 +51,7 @@ jobs:
           $target = Join-Path $staging $_.Name
           Copy-Item $_.FullName $target -Force
         }
-        Write-Host "✅ Artifacts collected at $staging"
+        Write-Host "Artifacts collected at $staging"
 
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
