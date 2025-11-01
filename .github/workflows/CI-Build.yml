@@ -9,85 +9,96 @@ on:
 jobs:
   build:
     name: Build & Publish All Projects
-    runs-on: windows-latest
+    runs-on: self-hosted   
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      # 1. Checkout code
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
-
-    - name: Build each project (Release)
-      shell: pwsh
-      run: |
-        $projects = @(
-          "slnNeoSpin/NeoSpinBatch/NeoSpinBatch.csproj",
-          "slnNeoSpin/NeoSpinBPMEngine/NeoSpinBPMEngine.csproj",
-          "slnNeoSpin/NeoSpinBusinessObjects/NeoSpinBusinessObjects.csproj",
-          "slnNeoSpin/NeoSpinBusinessTier/NeoSpinBusinessTier.csproj",
-          "slnNeoSpin/NeoSpinCommon/NeoSpinCommon.csproj",
-          "slnNeoSpin/NeoSpinESS/NeoSpinESS.csproj",
-          "slnNeoSpin/NeoSpinMSS/NeoSpinMSS.csproj",
-          "slnNeoSpin/NeoSpinInterface/NeoSpinInterface.csproj",
-          "slnNeoSpin/NeospinWebClientMVVM/NeospinWebClientMVVM.csproj"
-        )
-
-        foreach ($proj in $projects) {
-          Write-Host "Building project: $proj"
-          msbuild $proj /t:Rebuild /p:Configuration=Release /m `
-            /fl "/flp:logfile=$(Split-Path $proj -Leaf).log;verbosity=normal" `
-            /bl:"$(Split-Path $proj -Leaf).binlog"
-        }
-
-    - name: Prepare staging folder
-      shell: pwsh
-      run: |
-        $staging = "${{ runner.temp }}\Build_All_Staging"
-        if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
-        New-Item -ItemType Directory -Path $staging | Out-Null
-        Write-Host "Staging prepared at: $staging"
-
-    - name: Collect DLL outputs from all projects
-      shell: pwsh
-      run: |
-        $repoRoot = "${{ github.workspace }}"
-        $staging = "${{ runner.temp }}\Build_All_Staging"
-
-        $projects = @(
-          "slnNeoSpin/NeoSpinBatch",
-          "slnNeoSpin/NeoSpinBPMEngine",
-          "slnNeoSpin/NeoSpinBusinessObjects",
-          "slnNeoSpin/NeoSpinBusinessTier",
-          "slnNeoSpin/NeoSpinCommon",
-          "slnNeoSpin/NeoSpinESS",
-          "slnNeoSpin/NeoSpinMSS",
-          "slnNeoSpin/NeoSpinInterface",
-          "slnNeoSpin/NeospinWebClientMVVM"
-        )
-
-        foreach ($proj in $projects) {
-          $projPath = Join-Path $repoRoot $proj
-          if (-not (Test-Path $projPath)) { continue }
-
-          $binFolders = Get-ChildItem -Path $projPath -Recurse -Directory -Force |
-                        Where-Object { $_.Name -eq "bin" }
-
-          foreach ($bf in $binFolders) {
-            $target = Join-Path $staging (Split-Path $proj -Leaf)
-            New-Item -ItemType Directory -Force -Path $target | Out-Null
-            Write-Host "Copying DLLs from $($bf.FullName) → $target"
-            Copy-Item -Path (Join-Path $bf.FullName '*') -Destination $target -Recurse -Force -ErrorAction SilentlyContinue
+      # 2. Setup MSBuild (ensure MSBuild is installed locally)
+      - name: Setup MSBuild Path
+        shell: powershell
+        run: |
+          $msbuild = (Get-Command msbuild.exe -ErrorAction SilentlyContinue)
+          if (-not $msbuild) {
+            Write-Error "MSBuild not found in PATH. Please install Visual Studio Build Tools."
+            exit 1
+          } else {
+            Write-Host "MSBuild found at: $($msbuild.Source)"
           }
-        }
 
-        Write-Host "All DLLs collected at: $staging"
-        Get-ChildItem -Path $staging -Recurse | Select-Object FullName
+      # 3. Build all projects in Release mode
+      - name: Build All Projects
+        shell: powershell
+        run: |
+          $projects = @(
+            "slnNeoSpin/NeoSpinBatch/NeoSpinBatch.csproj",
+            "slnNeoSpin/NeoSpinBPMEngine/NeoSpinBPMEngine.csproj",
+            "slnNeoSpin/NeoSpinBusinessObjects/NeoSpinBusinessObjects.csproj",
+            "slnNeoSpin/NeoSpinBusinessTier/NeoSpinBusinessTier.csproj",
+            "slnNeoSpin/NeoSpinCommon/NeoSpinCommon.csproj",
+            "slnNeoSpin/NeoSpinESS/NeoSpinESS.csproj",
+            "slnNeoSpin/NeoSpinMSS/NeoSpinMSS.csproj",
+            "slnNeoSpin/NeoSpinInterface/NeoSpinInterface.csproj",
+            "slnNeoSpin/NeospinWebClientMVVM/NeospinWebClientMVVM.csproj"
+          )
 
-    - name: Upload combined artifact (All DLLs + logs)
-      uses: actions/upload-artifact@v4
-      with:
-        name: Build-All-Projects
-        path: ${{ runner.temp }}/Build_All_Staging
-        if-no-files-found: error
+          foreach ($proj in $projects) {
+            Write-Host "Building project: $proj"
+            msbuild $proj /t:Rebuild /p:Configuration=Release /m `
+              /fl "/flp:logfile=$(Split-Path $proj -Leaf).log;verbosity=minimal"
+          }
 
+      # 4. Prepare output staging folder
+      - name: Prepare Staging Folder
+        shell: powershell
+        run: |
+          $staging = "C:\Deployments\Build_All_Staging"
+          if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
+          New-Item -ItemType Directory -Path $staging | Out-Null
+          Write-Host "Staging folder prepared: $staging"
+
+      # 5. Collect DLL outputs
+      - name: Collect DLLs from All Projects
+        shell: powershell
+        run: |
+          $repoRoot = "${{ github.workspace }}"
+          $staging = "C:\Deployments\Build_All_Staging"
+
+          $projects = @(
+            "slnNeoSpin/NeoSpinBatch",
+            "slnNeoSpin/NeoSpinBPMEngine",
+            "slnNeoSpin/NeoSpinBusinessObjects",
+            "slnNeoSpin/NeoSpinBusinessTier",
+            "slnNeoSpin/NeoSpinCommon",
+            "slnNeoSpin/NeoSpinESS",
+            "slnNeoSpin/NeoSpinMSS",
+            "slnNeoSpin/NeoSpinInterface",
+            "slnNeoSpin/NeospinWebClientMVVM"
+          )
+
+          foreach ($proj in $projects) {
+            $projPath = Join-Path $repoRoot $proj
+            if (-not (Test-Path $projPath)) { continue }
+
+            $binFolders = Get-ChildItem -Path $projPath -Recurse -Directory -Force |
+                          Where-Object { $_.Name -eq "bin" }
+
+            foreach ($bf in $binFolders) {
+              $target = Join-Path $staging (Split-Path $proj -Leaf)
+              New-Item -ItemType Directory -Force -Path $target | Out-Null
+              Copy-Item -Path (Join-Path $bf.FullName '*') -Destination $target -Recurse -Force -ErrorAction SilentlyContinue
+            }
+          }
+
+          Write-Host "All DLLs collected at: $staging"
+          Get-ChildItem -Path $staging -Recurse | Select-Object FullName
+
+      # 6. Upload build artifact
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-All-Projects
+          path: C:\Deployments\Build_All_Staging
+          if-no-files-found: error

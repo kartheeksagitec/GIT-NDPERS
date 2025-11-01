@@ -1,4 +1,4 @@
-name: CD - Deploy from CI Artifacts
+﻿name: CD - Deploy from CI Artifacts
 
 on:
   workflow_run:
@@ -6,22 +6,27 @@ on:
     types:
       - completed
 
+permissions:
+  actions: read
+  contents: read
+  id-token: write
+
 jobs:
   deploy:
     name: Deploy to Local IIS Environment
-    runs-on: self-hosted  
+    runs-on: self-hosted
 
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      # 1. Confirm Trigger
+      # 1️⃣ Confirm CI Completion
       - name: Validate CI Completion
         shell: powershell
         run: |
-          Write-Host "CI build completed successfully."
+          Write-Host " CI build completed successfully."
           Write-Host "Starting CD deployment to IIS..."
 
-      # 2. Stop IIS Service
+      # 2️⃣ Stop IIS Service (if running)
       - name: Stop IIS Service
         shell: powershell
         run: |
@@ -32,20 +37,20 @@ jobs:
               Write-Host "IIS is not running or already stopped."
           }
 
-      # 3. Clean Old Deployment
+      # 3️⃣ Clean Existing Deployment Folder
       - name: Clean Existing Deployment
         shell: powershell
         run: |
           $deployPath = "C:\inetpub\wwwroot\NeoSpin"
           if (Test-Path $deployPath) {
-              Write-Host "Cleaning existing files from $deployPath"
+              Write-Host "Cleaning old files from $deployPath"
               Remove-Item "$deployPath\*" -Recurse -Force -ErrorAction SilentlyContinue
           } else {
               Write-Host "Creating new deployment directory..."
               New-Item -ItemType Directory -Path $deployPath | Out-Null
           }
 
-      # 4. Download Artifact from CI Workflow
+      # 4️⃣ Download Artifact from CI Workflow
       - name: Download CI Artifact
         uses: dawidd6/action-download-artifact@v2
         with:
@@ -53,8 +58,9 @@ jobs:
           workflow_conclusion: success
           name: Build-All-Projects
           path: C:\Deployments\NeoSpin
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      # 5. Deploy to IIS Folder
+      # 5️⃣ Deploy to IIS Folder
       - name: Deploy Application Files
         shell: powershell
         run: |
@@ -64,19 +70,19 @@ jobs:
           Copy-Item "$source\*" "$destination" -Recurse -Force -ErrorAction SilentlyContinue
           Write-Host "Deployment completed successfully."
 
-      # 6. Start IIS Service
+      # 6️⃣ Start IIS Service
       - name: Start IIS Service
         shell: powershell
         run: |
           Start-Service -Name 'W3SVC'
           Write-Host "IIS started successfully."
 
-      # 7. Deployment Summary
+      # 7️⃣ Deployment Summary
       - name: Deployment Summary
         shell: powershell
         run: |
           Write-Host "---------------------------------------------"
-          Write-Host "Deployment Summary"
+          Write-Host " Deployment Summary"
           Write-Host "Artifacts Source : CI - Build & Publish All Projects"
           Write-Host "Deployed To      : C:\inetpub\wwwroot\NeoSpin"
           Write-Host "Execution Time   : $(Get-Date)"
