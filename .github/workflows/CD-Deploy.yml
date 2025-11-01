@@ -21,7 +21,7 @@ jobs:
       - name: Confirm CI Success
         shell: powershell
         run: |
-          Write-Host "✅ CI workflow completed successfully. Starting deployment..."
+          Write-Host "CI workflow completed successfully. Starting deployment..."
 
       - name: Stop IIS Service
         shell: powershell
@@ -30,7 +30,7 @@ jobs:
               Stop-Service -Name 'W3SVC' -Force -ErrorAction Stop
               Write-Host "IIS stopped successfully."
           } catch {
-              Write-Host "⚠️ IIS was not running."
+              Write-Host "IIS was not running."
           }
 
       - name: Clean Deployment Folder
@@ -39,10 +39,10 @@ jobs:
           $deployPath = "C:\inetpub\wwwroot\NeoSpin"
           if (Test-Path $deployPath) {
               Remove-Item "$deployPath\*" -Recurse -Force -ErrorAction SilentlyContinue
-              Write-Host "🧹 Cleaned existing deployment directory."
+              Write-Host "Cleaned existing deployment directory."
           } else {
               New-Item -ItemType Directory -Path $deployPath | Out-Null
-              Write-Host "📁 Created new deployment directory."
+              Write-Host "Created new deployment directory."
           }
 
       - name: Download Build Artifact
@@ -59,19 +59,19 @@ jobs:
         shell: powershell
         run: |
           Copy-Item "C:\Deployments\NeoSpin\*" "C:\inetpub\wwwroot\NeoSpin" -Recurse -Force
-          Write-Host "🚀 Application deployed successfully to IIS."
+          Write-Host "Application deployed successfully to IIS."
 
       - name: Start IIS Service
         shell: powershell
         run: |
           Start-Service -Name 'W3SVC'
-          Write-Host "✅ IIS started successfully."
+          Write-Host "IIS started successfully."
 
       - name: Deployment Summary
         shell: powershell
         run: |
           Write-Host "---------------------------------------------"
-          Write-Host "✅ Deployment Summary"
+          Write-Host "Deployment Summary"
           Write-Host "Source: CI - Build & Publish All Projects"
           Write-Host "Deployed To: C:\inetpub\wwwroot\NeoSpin"
           Write-Host "Time: $(Get-Date)"
