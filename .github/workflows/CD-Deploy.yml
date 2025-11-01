@@ -1,0 +1,66 @@
+name: CD - Deploy from CI Artifacts
+
+on:
+  workflow_run:
+    workflows: ["CI - Build & Publish All Projects"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    name: Deploy to Local Environment
+    runs-on: self-hosted  
+
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Confirm Trigger
+        run: echo " CI pipeline succeeded. Starting CD deployment..."
+
+      - name: Stop IIS Services
+        shell: pwsh
+        run: |
+          Write-Host "Stopping IIS..."
+          Stop-Service -Name 'W3SVC' -Force
+          Write-Host "IIS stopped successfully."
+
+      - name: Clean old deployment files
+        shell: pwsh
+        run: |
+          $deployPath = "C:\inetpub\wwwroot\NeoSpin"
+          if (Test-Path $deployPath) {
+              Write-Host "Removing existing files in $deployPath"
+              Remove-Item "$deployPath\*" -Recurse -Force -ErrorAction SilentlyContinue
+          } else {
+              Write-Host "Creating new deployment folder..."
+              New-Item -ItemType Directory -Path $deployPath | Out-Null
+          }
+
+      - name: Download Build Artifacts from CI
+        uses: actions/download-artifact@v4
+        with:
+          name: Build-All-Projects
+          path: C:\Deployments\NeoSpin
+
+      - name: Deploy new build files
+        shell: pwsh
+        run: |
+          Write-Host "Copying new build artifacts to IIS folder..."
+          Copy-Item "C:\Deployments\NeoSpin\*" "C:\inetpub\wwwroot\NeoSpin" -Recurse -Force
+          Write-Host "Deployment completed successfully."
+
+      - name: Start IIS Services
+        shell: pwsh
+        run: |
+          Write-Host "Starting IIS..."
+          Start-Service -Name 'W3SVC'
+          Write-Host "IIS started successfully."
+
+      - name: Deployment Summary
+        shell: pwsh
+        run: |
+          Write-Host "---------------------------------------------------"
+          Write-Host " Deployment Summary:"
+          Write-Host " Artifacts deployed to: C:\inetpub\wwwroot\NeoSpin"
+          Write-Host " Completed on: $(Get-Date)"
+          Write-Host "---------------------------------------------------"
