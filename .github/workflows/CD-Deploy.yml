@@ -13,77 +13,66 @@ permissions:
 
 jobs:
   deploy:
-    name: Deploy to Local IIS Environment
+    name: Deploy to Local IIS
     runs-on: self-hosted
-
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      # 1️⃣ Confirm CI Completion
-      - name: Validate CI Completion
-        shell: powershell
+      - name: Confirm CI Success
+        shell: pwsh
         run: |
-          Write-Host " CI build completed successfully."
-          Write-Host "Starting CD deployment to IIS..."
+          Write-Host "✅ CI workflow completed successfully. Starting deployment..."
 
-      # 2️⃣ Stop IIS Service (if running)
       - name: Stop IIS Service
-        shell: powershell
+        shell: pwsh
         run: |
           try {
               Stop-Service -Name 'W3SVC' -Force -ErrorAction Stop
               Write-Host "IIS stopped successfully."
           } catch {
-              Write-Host "IIS is not running or already stopped."
+              Write-Host "⚠️ IIS was not running."
           }
 
-      # 3️⃣ Clean Existing Deployment Folder
-      - name: Clean Existing Deployment
-        shell: powershell
+      - name: Clean Deployment Folder
+        shell: pwsh
         run: |
           $deployPath = "C:\inetpub\wwwroot\NeoSpin"
           if (Test-Path $deployPath) {
-              Write-Host "Cleaning old files from $deployPath"
               Remove-Item "$deployPath\*" -Recurse -Force -ErrorAction SilentlyContinue
+              Write-Host "🧹 Cleaned existing deployment directory."
           } else {
-              Write-Host "Creating new deployment directory..."
               New-Item -ItemType Directory -Path $deployPath | Out-Null
+              Write-Host "📁 Created new deployment directory."
           }
 
-      # 4️⃣ Download Artifact from CI Workflow
-      - name: Download CI Artifact
+      - name: Download Build Artifact
         uses: dawidd6/action-download-artifact@v2
         with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           workflow: "CI - Build & Publish All Projects"
           workflow_conclusion: success
+          branch: main
           name: Build-All-Projects
           path: C:\Deployments\NeoSpin
-          github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      # 5️⃣ Deploy to IIS Folder
-      - name: Deploy Application Files
-        shell: powershell
+      - name: Deploy to IIS
+        shell: pwsh
         run: |
-          $source = "C:\Deployments\NeoSpin"
-          $destination = "C:\inetpub\wwwroot\NeoSpin"
-          Write-Host "Copying new build artifacts to IIS folder..."
-          Copy-Item "$source\*" "$destination" -Recurse -Force -ErrorAction SilentlyContinue
-          Write-Host "Deployment completed successfully."
+          Copy-Item "C:\Deployments\NeoSpin\*" "C:\inetpub\wwwroot\NeoSpin" -Recurse -Force
+          Write-Host "🚀 Application deployed successfully to IIS."
 
-      # 6️⃣ Start IIS Service
       - name: Start IIS Service
-        shell: powershell
+        shell: pwsh
         run: |
           Start-Service -Name 'W3SVC'
-          Write-Host "IIS started successfully."
+          Write-Host "✅ IIS started successfully."
 
-      # 7️⃣ Deployment Summary
       - name: Deployment Summary
-        shell: powershell
+        shell: pwsh
         run: |
           Write-Host "---------------------------------------------"
-          Write-Host " Deployment Summary"
-          Write-Host "Artifacts Source : CI - Build & Publish All Projects"
-          Write-Host "Deployed To      : C:\inetpub\wwwroot\NeoSpin"
-          Write-Host "Execution Time   : $(Get-Date)"
+          Write-Host "✅ Deployment Summary"
+          Write-Host "Source: CI - Build & Publish All Projects"
+          Write-Host "Deployed To: C:\inetpub\wwwroot\NeoSpin"
+          Write-Host "Time: $(Get-Date)"
           Write-Host "---------------------------------------------"
